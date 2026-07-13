@@ -1,0 +1,2 @@
+model,train_size,test_size,accuracy,precision,recall,f1
+distilbert,4000,4000,0.891,0.8785091965150048,0.9075,0.8927693064436792

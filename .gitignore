@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+data/aclImdb/
+data/cache/
+
+logs/
+checkpoints/
+trainer_output/
+
+~$*
