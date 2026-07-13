@@ -1,10 +1,30 @@
+# Data handling
+# pandas is used to store the reviews in DataFrames and to save the result tables.
 pandas>=2.0
+
+# NumPy supports numerical operations and is also used internally by scikit-learn.
 numpy>=1.24
+
+# Classical machine-learning models, TF-IDF features, sampling, and evaluation metrics.
 scikit-learn>=1.3
+
+# Text preprocessing: English stop words, tokenisation, and WordNet lemmatisation.
 nltk>=3.8
+
+# Creates the performance graph and the confusion-matrix figures.
 matplotlib>=3.7
+
+# Allows pandas to read and write the cleaned review cache as Parquet files.
 pyarrow>=14.0
+
+# Deep-learning framework used to train DistilBERT.
 torch>=2.2
+
+# Provides the pretrained DistilBERT tokenizer, model, and Trainer tools.
 transformers>=4.40
+
+# Converts the review samples into datasets that can be used by the Hugging Face Trainer.
 datasets>=2.19
+
+# Helps the Hugging Face Trainer run correctly on CPU, CUDA, or Apple MPS hardware.
 accelerate>=0.30
