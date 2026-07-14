@@ -24,8 +24,8 @@
 
 Can a machine read a movie review and tell whether the writer loved the film or hated it?
 
-This project builds that system twice — once the **classical** way with TF-IDF features and
-linear models, and once with a **fine-tuned transformer** — then compares them head to head.
+This project builds that system twice : once the **classical** way with TF-IDF features and
+linear models, and once with a **fine-tuned transformer** , then compares them head to head.
 
 | | Approach | Method |
 |:---:|---|---|
@@ -33,7 +33,7 @@ linear models, and once with a **fine-tuned transformer** — then compares them
 | 🤖 | **Transformer** | Fine-tuned DistilBERT (`distilbert-base-uncased`) |
 
 The task also asks the system to be tested as the dataset grows, so every classical model is
-trained **four times** — on 1,000 → 5,000 → 12,500 → 25,000 reviews — and always evaluated on
+trained **four times** : on 1,000 → 5,000 → 12,500 → 25,000 reviews, and always evaluated on
 the same held-out test set. 📈
 
 > 🎓 **Course:** DLBAIPNLP01 — Project: NLP (Task 1) · B.Sc. Applied Artificial Intelligence
@@ -56,7 +56,7 @@ the same held-out test set. 📈
 
 **Three things the numbers say:**
 
-- 🚀 **More data helps — until it doesn't.** The jump from 1,000 → 5,000 reviews is big; from
+- 🚀 **More data helps until it doesn't.** The jump from 1,000 → 5,000 reviews is big; from
   12,500 → 25,000 it's marginal. TF-IDF hits a ceiling.
 - 🥊 **Logistic Regression wins among the classical models**, thanks to the most balanced
   precision and recall.
