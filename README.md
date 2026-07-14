@@ -2,7 +2,7 @@
 
 # 🎬 Movie Review Sentiment Analysis
 
-### Binary sentiment classification on 50,000 IMDb reviews — classical ML vs. a fine-tuned transformer
+### Binary sentiment classification on 50,000 IMDb reviews : classical ML vs. a fine-tuned transformer
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
@@ -36,7 +36,7 @@ The task also asks the system to be tested as the dataset grows, so every classi
 trained **four times** : on 1,000 → 5,000 → 12,500 → 25,000 reviews, and always evaluated on
 the same held-out test set. 📈
 
-> 🎓 **Course:** DLBAIPNLP01 — Project: NLP (Task 1) · B.Sc. Applied Artificial Intelligence
+> 🎓 **Course:** DLBAIPNLP01 - Project: NLP (Task 1) · B.Sc. Applied Artificial Intelligence
 > 🏫 **IU International University of Applied Sciences** · builds on DLBAIINLP01 (Introduction to NLP)
 
 ---
@@ -60,7 +60,7 @@ the same held-out test set. 📈
   12,500 → 25,000 it's marginal. TF-IDF hits a ceiling.
 - 🥊 **Logistic Regression wins among the classical models**, thanks to the most balanced
   precision and recall.
-- 🧠 **DistilBERT edges ahead on a fraction of the data** — it reads words *in context*, while
+- 🧠 **DistilBERT edges ahead on a fraction of the data** , it reads words *in context*, while
   TF-IDF sees only an unordered bag of terms.
 
 > [!IMPORTANT]
@@ -80,10 +80,10 @@ The **[Stanford Large Movie Review Dataset](https://ai.stanford.edu/~amaas/data/
 | 🎞️ Total reviews | 50,000 |
 | 🏋️ Training | 25,000 (12.5k pos · 12.5k neg) |
 | 🧪 Testing | 25,000 (12.5k pos · 12.5k neg) |
-| ⚖️ Balance | Perfectly 50/50 — no class imbalance to correct |
+| ⚖️ Balance | Perfectly 50/50 : no class imbalance to correct |
 | 🗑️ Quirks | Full-length, informal, and still full of leftover `<br />` HTML tags |
 
-The unlabelled `train/unsup` folder is ignored — this is a supervised task.
+The unlabelled `train/unsup` folder is ignored, this is a supervised task.
 
 ---
 
@@ -168,7 +168,7 @@ experiment. **🎲 Fully reproducible:** a fixed random seed (42) is used everyw
 | 📏 Max sequence length | 256 tokens |
 | 💻 Hardware | Apple Silicon M4 (MPS) |
 
-**Result:** `0.8910` accuracy · `0.8928` F1 — the best score in the project, on **16%** of the
+**Result:** `0.8910` accuracy · `0.8928` F1 : the best score in the project, on **16%** of the
 training data the classical models used. 🎯
 
 The latest run produced **1,749 true negatives**, **251 false positives**, **185 false negatives**, and **1,815 true positives** on the balanced 4,000-review test subset.
@@ -180,7 +180,7 @@ The latest run produced **1,749 true negatives**, **251 false positives**, **185
 | 📈 Logistic Regression (25,000) | 🤖 DistilBERT (4,000) |
 |:---:|:---:|
 | <img src="results/classical_best_confusion.png" width="380"> | <img src="results/distilbert_confusion.png" width="380"> |
-| Errors almost perfectly symmetric — <br>no bias toward either class | Higher recall — catches more <br>positive reviews |
+| Errors almost perfectly symmetric : <br>no bias toward either class | Higher recall : catches more <br>positive reviews |
 
 </div>
 
@@ -193,7 +193,7 @@ misclassified reviews, and they fall into three recognisable traps 🪤
 
 | | Trap | What happens |
 |:---:|---|---|
-| 🎭 | **Sarcasm & irony** | A review stuffed with `brilliant`, `masterpiece`, `incredible` — mocking the film. The model takes it at face value. |
+| 🎭 | **Sarcasm & irony** | A review stuffed with `brilliant`, `masterpiece`, `incredible` : mocking the film. The model takes it at face value. |
 | ⚖️ | **Multipolarity** | *"The acting was excellent… I was extremely disappointed."* Praise for one thing, a verdict against another. |
 | 🌑 | **Misleading vocabulary** | A **positive** review of a cult horror film, full of `weird`, `macabre`, `low-budget`. Dark words, happy reviewer. |
 
@@ -241,7 +241,7 @@ bash scripts/download_data.sh
 ```
 
 > [!TIP]
-> The NLTK resources (stopwords, WordNet, punkt) download **automatically** on first run — no
+> The NLTK resources (stopwords, WordNet, punkt) download **automatically** on first run : no
 > extra step needed. ✨
 
 ---
@@ -251,14 +251,14 @@ bash scripts/download_data.sh
 Run from the repository root so the `src` package imports resolve.
 
 ```bash
-# 🧹 1. Load, clean and cache the reviews (once — later runs reuse the cache)
+# 🧹 1. Load, clean and cache the reviews (once , later runs reuse the cache)
 python -m src.data_preprocessing
 
 # 📊 2. Classical experiment across all four dataset sizes
 #       → classical_results.csv · confusion matrix · performance chart · error examples
 python -m src.classical_models
 
-# 🤖 3. DistilBERT fine-tune  ⏳ slow — expect a long run on a laptop
+# 🤖 3. DistilBERT fine-tune  ⏳ slow , expect a long run on a laptop
 #       → distilbert_results.csv · confusion matrix
 python -m src.transformer_model
 
@@ -311,6 +311,6 @@ negative ❌
 <div align="center">
 
 **🎓 Built for IU International University of Applied Sciences**
-*B.Sc. Applied Artificial Intelligence · DLBAIPNLP01 — Project: NLP*
+*B.Sc. Applied Artificial Intelligence · DLBAIPNLP01 - Project: NLP*
 
 </div>
