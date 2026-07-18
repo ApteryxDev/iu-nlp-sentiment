@@ -1,25 +1,15 @@
 """
-Classical machine-learning models for the IMDb sentiment project.
+Classical machine learning experiments for IMDb sentiment analysis.
 
-I use this file to compare three models:
+The script compares three supervised models:
 
 - Multinomial Naive Bayes
 - Linear Support Vector Machine
 - Logistic Regression
 
-The assignment also asks to test the system with different amounts of
-training data, so I repeat the experiment with 1,000, 5,000, 12,500
-and 25,000 reviews.
-
-The main order is:
-
-1. load the cleaned IMDb reviews
-2. create a balanced training subset
-3. convert the text with TF-IDF
-4. train the three models
-5. calculate the evaluation metrics
-6. save the results and figures
-7. print a few mistakes for the error analysis
+Each model is trained with four different amounts of labelled data.
+The results are evaluated on the same 25,000-review test set so that
+the models and training sizes can be compared fairly.
 """
 
 import matplotlib.pyplot as plt
@@ -47,50 +37,47 @@ from .data_preprocessing import (
 
 def balanced_subset(dataframe, reviews_per_class):
     """
-    Select the same number of positive and negative reviews.
+    Return a random subset with equal positive and negative reviews.
 
-    I first used the first rows from each class, but changed this to
-    random sampling so the result does not depend on the original
-    file order. The fixed seed keeps the samples reproducible.
+    A fixed random seed is used so that the same samples can be
+    selected again when the experiment is repeated.
     """
 
-    positive = dataframe[dataframe["label"] == 1].sample(
+    positive_reviews = dataframe[dataframe["label"] == 1].sample(
         n=reviews_per_class,
         random_state=SEED,
     )
 
-    negative = dataframe[dataframe["label"] == 0].sample(
+    negative_reviews = dataframe[dataframe["label"] == 0].sample(
         n=reviews_per_class,
         random_state=SEED,
     )
 
     subset = pd.concat(
-        [positive, negative],
+        [positive_reviews, negative_reviews],
         ignore_index=True,
     )
 
-    return (
-        subset
-        .sample(frac=1, random_state=SEED)
-        .reset_index(drop=True)
-    )
+    # Shuffle the two classes together before model training.
+    return subset.sample(
+        frac=1,
+        random_state=SEED,
+    ).reset_index(drop=True)
 
 
 def create_models():
     """
-    Create fresh model objects for one experiment.
+    Create new model objects for one training-size experiment.
 
-    I create new models for each training-set size so that every run
-    starts independently.
+    New instances are used so that each experiment begins with
+    models that have not already been fitted.
     """
 
     return {
         "naive_bayes": MultinomialNB(),
-
         "linear_svm": LinearSVC(
             random_state=SEED,
         ),
-
         "logistic_regression": LogisticRegression(
             max_iter=1000,
             random_state=SEED,
@@ -100,7 +87,7 @@ def create_models():
 
 def calculate_metrics(y_true, y_pred):
     """
-    Calculate the four metrics used in the report.
+    Calculate the evaluation metrics reported in the project.
     """
 
     return {
@@ -113,7 +100,7 @@ def calculate_metrics(y_true, y_pred):
 
 def save_confusion_matrix(y_true, y_pred, output_path, title):
     """
-    Create and save a confusion matrix for the best model.
+    Save a confusion matrix for the strongest classical model.
     """
 
     matrix = confusion_matrix(y_true, y_pred)
@@ -129,7 +116,6 @@ def save_confusion_matrix(y_true, y_pred, output_path, title):
         [0, 1],
         labels=["Negative", "Positive"],
     )
-
     axis.set_yticks(
         [0, 1],
         labels=["Negative", "Positive"],
@@ -139,10 +125,10 @@ def save_confusion_matrix(y_true, y_pred, output_path, title):
     axis.set_ylabel("Actual label")
     axis.set_title(title)
 
-    # Add the number of reviews inside each square.
+    # Display the number of reviews inside each matrix cell.
     for row in range(2):
         for column in range(2):
-            colour = (
+            text_colour = (
                 "white"
                 if matrix[row, column] > matrix.max() / 2
                 else "black"
@@ -154,7 +140,7 @@ def save_confusion_matrix(y_true, y_pred, output_path, title):
                 str(matrix[row, column]),
                 ha="center",
                 va="center",
-                color=colour,
+                color=text_colour,
                 fontsize=12,
             )
 
@@ -166,10 +152,7 @@ def save_confusion_matrix(y_true, y_pred, output_path, title):
 
 def save_performance_plot(results):
     """
-    Plot the F1-score for each model and training-set size.
-
-    This graph helps show whether adding more training reviews
-    continues to improve the models.
+    Plot the F1-score of each model at every training-set size.
     """
 
     output_path = RESULTS_DIR / "performance_by_size.png"
@@ -178,7 +161,6 @@ def save_performance_plot(results):
 
     for model_name, model_results in results.groupby("model"):
         model_results = model_results.sort_values("train_size")
-
         readable_name = model_name.replace("_", " ").title()
 
         plt.plot(
@@ -195,7 +177,6 @@ def save_performance_plot(results):
     plt.xticks(
         sorted(results["train_size"].unique())
     )
-
     plt.ylim(0.79, 0.90)
     plt.grid(alpha=0.3)
     plt.legend()
@@ -209,10 +190,10 @@ def save_performance_plot(results):
 
 def print_error_examples(test_data, predictions, number_of_examples=5):
     """
-    Print a few wrong predictions.
+    Print examples of false-positive and false-negative predictions.
 
-    I use these examples later in the report to discuss difficult
-    cases such as sarcasm, mixed sentiment and contrast.
+    These examples are useful for examining cases that are difficult
+    for a TF-IDF model, such as sarcasm and mixed opinions.
     """
 
     errors = test_data[["text", "label"]].copy()
@@ -250,7 +231,7 @@ def print_error_examples(test_data, predictions, number_of_examples=5):
 
 def run_experiment():
     """
-    Run all classical model experiments.
+    Train and evaluate all classical models.
     """
 
     train_data, test_data = get_clean_frames()
@@ -260,8 +241,8 @@ def run_experiment():
 
     results_rows = []
 
-    # I keep track of the best F1-score so I can save the confusion
-    # matrix and error examples for the strongest model.
+    # Store the strongest result so its confusion matrix and error
+    # examples can be produced after all experiments are complete.
     best_run = {
         "f1": -1.0,
         "model": None,
@@ -269,8 +250,8 @@ def run_experiment():
         "predictions": None,
     }
 
-    # The values represent reviews per class:
-    # 500 + 500 = 1,000 total, and so on.
+    # Each value represents the number of reviews taken from one class.
+    # For example, 500 positive and 500 negative reviews give 1,000 total.
     for reviews_per_class in TRAIN_SIZES_PER_CLASS:
         training_subset = balanced_subset(
             train_data,
@@ -281,15 +262,13 @@ def run_experiment():
 
         print(f"\nTraining-set size: {train_size}")
 
-        # I create a new vectorizer for every training size.
-        # It is fitted only on the training reviews.
-        #
-        # The test reviews are transformed afterwards with the same
-        # vocabulary. This avoids using test information during training.
+        # A new vectorizer is fitted for each training size.
+        # The test set is transformed only after the training vocabulary
+        # has been learned, which prevents information leakage.
         vectorizer = TfidfVectorizer(
-            ngram_range=(1, 2),   # individual words and word pairs
-            min_df=2,             # ignore terms appearing only once
-            max_features=50000,   # keep the feature matrix manageable
+            ngram_range=(1, 2),
+            min_df=2,
+            max_features=50000,
         )
 
         training_features = vectorizer.fit_transform(
@@ -339,9 +318,7 @@ def run_experiment():
                     "predictions": predictions,
                 }
 
-    results = pd.DataFrame(
-        results_rows
-    )
+    results = pd.DataFrame(results_rows)
 
     results_path = RESULTS_DIR / "classical_results.csv"
 
@@ -352,14 +329,9 @@ def run_experiment():
 
     print(f"\nSaved results to: {results_path}")
 
-    save_performance_plot(
-        results
-    )
+    save_performance_plot(results)
 
-    confusion_path = (
-        RESULTS_DIR
-        / "classical_best_confusion.png"
-    )
+    confusion_path = RESULTS_DIR / "classical_best_confusion.png"
 
     model_title = (
         best_run["model"]
@@ -377,10 +349,7 @@ def run_experiment():
         ),
     )
 
-    print(
-        f"Saved confusion matrix to: "
-        f"{confusion_path}"
-    )
+    print(f"Saved confusion matrix to: {confusion_path}")
 
     print(
         f"\nBest model: "
