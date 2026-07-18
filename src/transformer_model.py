@@ -1,21 +1,22 @@
 """
 Optional DistilBERT experiment for IMDb sentiment classification.
 
-The main part of the project compares classical models using TF-IDF.
-I added this experiment to see how a pretrained language model performs
-on the same type of task.
+The main project compares classical machine learning models using
+TF-IDF features. This script adds a pretrained transformer model as
+a separate experiment.
 
-Because DistilBERT takes much longer to train on my laptop, I use a
-smaller balanced sample:
+Because fine-tuning DistilBERT requires more time and computing power,
+the model is trained and evaluated on smaller balanced samples:
 
 - 4,000 training reviews
 - 4,000 test reviews
 - 2 training epochs
 
-This result is treated as an additional experiment rather than a direct
-comparison with the classical models, which use the complete test set.
+The result is reported separately because the classical models use the
+complete 25,000-review test set.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -35,6 +36,344 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
+
+from .data_preprocessing import (
+    PROJECT_ROOT,
+    RESULTS_DIR,
+    SEED,
+    load_dataset,
+)
+
+
+# Main settings for the transformer experiment.
+MODEL_NAME = "distilbert-base-uncased"
+TRAIN_SIZE = 4000
+TEST_SIZE = 4000
+EPOCHS = 2
+BATCH_SIZE = 16
+MAX_LENGTH = 256
+
+
+def choose_device():
+    """
+    Return the fastest available PyTorch device.
+
+    Apple MPS is checked first because the experiment was run on an
+    Apple Silicon Mac. CUDA is used when available on other systems,
+    otherwise the code falls back to the CPU.
+    """
+
+    if torch.backends.mps.is_available():
+        return "mps"
+
+    if torch.cuda.is_available():
+        return "cuda"
+
+    return "cpu"
+
+
+def balanced_sample(dataframe, total_size):
+    """
+    Return a random sample with equal positive and negative reviews.
+
+    The fixed seed allows the same sample to be selected again when the
+    experiment is repeated.
+    """
+
+    reviews_per_class = total_size // 2
+
+    positive_reviews = dataframe[dataframe["label"] == 1].sample(
+        n=reviews_per_class,
+        random_state=SEED,
+    )
+
+    negative_reviews = dataframe[dataframe["label"] == 0].sample(
+        n=reviews_per_class,
+        random_state=SEED,
+    )
+
+    sample = pd.concat(
+        [positive_reviews, negative_reviews],
+        ignore_index=True,
+    )
+
+    return sample.sample(
+        frac=1,
+        random_state=SEED,
+    ).reset_index(drop=True)
+
+
+def calculate_metrics(y_true, y_pred):
+    """
+    Calculate the same evaluation metrics used for the classical models.
+    """
+
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "precision": precision_score(y_true, y_pred),
+        "recall": recall_score(y_true, y_pred),
+        "f1": f1_score(y_true, y_pred),
+    }
+
+
+def trainer_metrics(eval_prediction):
+    """
+    Convert model scores into class labels for Trainer evaluation.
+    """
+
+    logits, labels = eval_prediction
+    predictions = np.argmax(logits, axis=-1)
+
+    return calculate_metrics(
+        labels,
+        predictions,
+    )
+
+
+def save_confusion_matrix(y_true, y_pred, output_path):
+    """
+    Save the DistilBERT confusion matrix used in the report.
+    """
+
+    matrix = confusion_matrix(
+        y_true,
+        y_pred,
+    )
+
+    figure, axis = plt.subplots(figsize=(5, 4))
+
+    image = axis.imshow(
+        matrix,
+        cmap="Blues",
+    )
+
+    axis.set_xticks(
+        [0, 1],
+        labels=["Negative", "Positive"],
+    )
+    axis.set_yticks(
+        [0, 1],
+        labels=["Negative", "Positive"],
+    )
+
+    axis.set_xlabel("Predicted label")
+    axis.set_ylabel("Actual label")
+    axis.set_title("DistilBERT")
+
+    # Display the number of reviews inside each matrix cell.
+    for row in range(2):
+        for column in range(2):
+            text_colour = (
+                "white"
+                if matrix[row, column] > matrix.max() / 2
+                else "black"
+            )
+
+            axis.text(
+                column,
+                row,
+                str(matrix[row, column]),
+                ha="center",
+                va="center",
+                color=text_colour,
+                fontsize=12,
+            )
+
+    figure.colorbar(
+        image,
+        ax=axis,
+    )
+
+    figure.tight_layout()
+    figure.savefig(
+        output_path,
+        dpi=300,
+    )
+
+    plt.close(figure)
+
+
+def make_huggingface_dataset(dataframe, tokenizer):
+    """
+    Convert a pandas DataFrame into a tokenised Hugging Face dataset.
+    """
+
+    dataset = Dataset.from_pandas(
+        dataframe[["text", "label"]],
+        preserve_index=False,
+    )
+
+    def tokenize(batch):
+        """
+        Tokenise one batch of reviews.
+
+        Reviews longer than the selected limit are shortened because
+        DistilBERT cannot process unlimited sequence lengths.
+        """
+
+        return tokenizer(
+            batch["text"],
+            truncation=True,
+            max_length=MAX_LENGTH,
+        )
+
+    dataset = dataset.map(
+        tokenize,
+        batched=True,
+    )
+
+    # Trainer expects the target column to be named "labels".
+    dataset = dataset.rename_column(
+        "label",
+        "labels",
+    )
+
+    required_columns = {
+        "input_ids",
+        "attention_mask",
+        "labels",
+    }
+
+    columns_to_remove = [
+        column
+        for column in dataset.column_names
+        if column not in required_columns
+    ]
+
+    return dataset.remove_columns(
+        columns_to_remove
+    )
+
+
+def run_experiment():
+    """
+    Fine-tune DistilBERT and save the evaluation results.
+    """
+
+    device = choose_device()
+    print(f"Device: {device}")
+
+    train_data, test_data = load_dataset()
+
+    train_sample = balanced_sample(
+        train_data,
+        TRAIN_SIZE,
+    )
+
+    test_sample = balanced_sample(
+        test_data,
+        TEST_SIZE,
+    )
+
+    print(f"Training reviews: {len(train_sample)}")
+    print(f"Test reviews: {len(test_sample)}")
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        MODEL_NAME
+    )
+
+    train_dataset = make_huggingface_dataset(
+        train_sample,
+        tokenizer,
+    )
+
+    test_dataset = make_huggingface_dataset(
+        test_sample,
+        tokenizer,
+    )
+
+    # Load the pretrained language model with a two-class output layer.
+    model = AutoModelForSequenceClassification.from_pretrained(
+        MODEL_NAME,
+        num_labels=2,
+    )
+
+    # Padding is added only to the longest sequence in each batch.
+    data_collator = DataCollatorWithPadding(
+        tokenizer=tokenizer
+    )
+
+    training_arguments = TrainingArguments(
+        output_dir=str(
+            PROJECT_ROOT / "data" / "bert_ckpt"
+        ),
+        num_train_epochs=EPOCHS,
+        per_device_train_batch_size=BATCH_SIZE,
+        per_device_eval_batch_size=BATCH_SIZE,
+        logging_steps=50,
+        save_strategy="no",
+        report_to="none",
+        seed=SEED,
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_arguments,
+        train_dataset=train_dataset,
+        eval_dataset=test_dataset,
+        data_collator=data_collator,
+        compute_metrics=trainer_metrics,
+    )
+
+    print("\nStarting DistilBERT training...")
+    trainer.train()
+
+    evaluation = trainer.evaluate()
+
+    print("\nEvaluation results")
+
+    for metric_name, metric_value in evaluation.items():
+        if isinstance(metric_value, float):
+            print(f"{metric_name}: {metric_value:.4f}")
+
+    # Trainer returns a score for each class. The class with the highest
+    # score is used as the final prediction.
+    prediction_output = trainer.predict(
+        test_dataset
+    )
+
+    predictions = np.argmax(
+        prediction_output.predictions,
+        axis=-1,
+    )
+
+    final_metrics = calculate_metrics(
+        test_sample["label"],
+        predictions,
+    )
+
+    results = pd.DataFrame(
+        [
+            {
+                "model": "distilbert",
+                "train_size": len(train_sample),
+                "test_size": len(test_sample),
+                **final_metrics,
+            }
+        ]
+    )
+
+    results_path = RESULTS_DIR / "distilbert_results.csv"
+
+    results.to_csv(
+        results_path,
+        index=False,
+    )
+
+    confusion_path = RESULTS_DIR / "distilbert_confusion.png"
+
+    save_confusion_matrix(
+        test_sample["label"],
+        predictions,
+        confusion_path,
+    )
+
+    print(f"\nSaved results to: {results_path}")
+    print(f"Saved confusion matrix to: {confusion_path}")
+
+
+if __name__ == "__main__":
+    run_experiment())
 
 from .data_preprocessing import (
     PROJECT_ROOT,
